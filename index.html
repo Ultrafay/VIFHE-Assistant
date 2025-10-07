@@ -3,8 +3,13 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Vifhe Assistant</title>
+  <title>VIFHE Bot</title>
   <meta name="color-scheme" content="dark"/>
+
+  <!-- Markdown + sanitize (for clean blue links, headings, lists, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
   <style>
     :root{
       --bg:#0b1020;
@@ -46,9 +51,10 @@
       width:42px; height:42px; border-radius:12px; display:grid; place-items:center;
       background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#0b1020; font-weight:900;
       box-shadow:var(--shadow);
+      font-size:20px;
     }
-    .brand h1{ margin:0; font-size:18px; letter-spacing:.2px }
-    .brand p{ margin:2px 0 0; font-size:13px; color:var(--muted) }
+    .brand h1{ margin:0; font-size:22px; letter-spacing:.2px }
+    .brand p{ margin:4px 0 0; font-size:13px; color:var(--muted) }
 
     /* Chat card */
     .card{
@@ -74,13 +80,21 @@
     .row{ display:flex; gap:10px; margin:12px 0; align-items:flex-end; }
     .row.me{ flex-direction:row-reverse }
     .avatar{
-      flex:0 0 36px; height:36px; border-radius:50%;
-      background:linear-gradient(135deg, rgba(125,211,252,.8), rgba(167,139,250,.8));
-      display:grid; place-items:center; font-size:16px; color:#0b1020; font-weight:900; border:1px solid var(--border);
+      --size: 34px;
+      flex:0 0 var(--size); width:var(--size); height:var(--size); border-radius:50%;
+      display:grid; place-items:center;
+      background:linear-gradient(135deg, rgba(125,211,252,.85), rgba(167,139,250,.85));
+      border:1px solid var(--border);
+      box-shadow:0 6px 16px rgba(0,0,0,.18);
+
+      /* refined typography */
+      font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 12px; font-weight: 600; letter-spacing: .3px;
+      color: #0b1020; line-height:1; text-transform: uppercase;
     }
     .bubble{
-      max-width: min(78%, 700px);
-      padding:12px 14px; border-radius:14px; border:1px solid var(--border);
+      max-width:min(78%, 700px);
+      padding:14px 16px; border-radius:14px; border:1px solid var(--border);
       background:rgba(255,255,255,.05); box-shadow: 0 6px 18px rgba(0,0,0,.15);
       word-wrap: anywhere;
     }
@@ -88,7 +102,21 @@
       background:linear-gradient(135deg, rgba(125,211,252,.18), rgba(167,139,250,.2));
       border-color:rgba(255,255,255,.16);
     }
-    .meta{ margin-top:6px; font-size:12px; color:var(--muted) }
+
+    /* Assistant message typography + links */
+    .bubble h1,.bubble h2,.bubble h3{ margin:0 0 .5rem }
+    .bubble p{ margin:.4rem 0 }
+    .bubble ul{ margin:.4rem 0 .4rem 1.2rem }
+    .bubble a{
+      color:#6cbcff;                   /* clean blue */
+      text-decoration:none;
+      border-bottom:1px dashed rgba(108,188,255,.65);
+      font-weight:700;
+    }
+    .bubble a:hover{
+      text-decoration:underline;       /* solid underline on hover */
+      border-bottom-color: transparent;
+    }
 
     /* Typing */
     .typing{ display:inline-flex; gap:5px; align-items:center; color:var(--muted); font-size:13px }
@@ -101,9 +129,7 @@
       display:flex; gap:10px; padding:12px; border-top:1px solid var(--border);
       background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
     }
-    .field{
-      position:relative; flex:1;
-    }
+    .field{ position:relative; flex:1; }
     textarea{
       width:100%; min-height:44px; max-height:160px; resize:none;
       border-radius:14px; padding:12px 44px 12px 14px; color:var(--text);
@@ -119,6 +145,7 @@
       width:28px; height:28px; display:grid; place-items:center; border-radius:8px;
       border:1px solid var(--border); background:rgba(255,255,255,.04);
       cursor:pointer; transition: transform .08s ease, background .15s ease;
+      user-select:none;
     }
     .icon-btn:active{ transform:scale(.98) }
 
@@ -141,7 +168,7 @@
     /* Mobile */
     @media (max-width:640px){
       .bubble{ max-width:88% }
-      .avatar{ display:none } /* cleaner on small screens */
+      .avatar{ --size: 30px; font-size: 11px; }
     }
 
     @media (prefers-reduced-motion: reduce){
@@ -154,8 +181,8 @@
     <div class="container">
       <div class="logo" aria-hidden>🎓</div>
       <div class="brand">
-        <h1>Vifhe Assistant</h1>
-        <p>Clean, minimal chat — easy to read and share.</p>
+        <h1>VIFHE Bot</h1>
+        <p>Your study companion • Ask questions, get clear answers</p>
       </div>
     </div>
   </header>
@@ -170,7 +197,7 @@
 
     <form class="input" id="form" autocomplete="off">
       <div class="field">
-        <textarea id="input" placeholder="Type your message…  (Enter to send • Shift+Enter = new line)" aria-label="Message input"></textarea>
+        <textarea id="input" placeholder="Type your question…  (Enter to send • Shift+Enter = new line)" aria-label="Message input"></textarea>
         <div class="action">
           <div class="icon-btn" title="Clear" id="clearBtn">✕</div>
         </div>
@@ -193,7 +220,7 @@
       r.className = 'row' + (me ? ' me' : '');
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
-      avatar.textContent = me ? 'You' : 'VA';
+      avatar.textContent = me ? 'YOU' : 'VA';
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       r.appendChild(avatar); r.appendChild(bubble);
@@ -202,9 +229,20 @@
       return { r, bubble };
     }
 
+    // Adds a message. Assistant messages are rendered as Markdown (clean blue links).
     function addMessage(text, me=false){
       const { bubble } = row(me);
-      bubble.textContent = text;
+      if (me) {
+        bubble.textContent = text; // user stays plain text
+      } else {
+        const html = DOMPurify.sanitize(marked.parse(text || ''), { USE_PROFILES:{ html:true } });
+        bubble.innerHTML = html;
+        // safe links
+        bubble.querySelectorAll('a').forEach(a => {
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        });
+      }
     }
 
     function addThinking(){
@@ -244,7 +282,7 @@
       }
     }
 
-    // Auto-grow textarea and disable send when empty
+    // Auto-grow textarea + disable send when empty
     function updateSendState(){
       const hasText = $input.value.trim().length > 0;
       $send.disabled = !hasText;
@@ -275,12 +313,12 @@
     $clear.addEventListener('click', () => {
       $messages.innerHTML = '';
       threadId = null;
-      addMessage("Hi! I'm the Vifhe Assistant. How can I help?");
+      addMessage("Hi! I'm the VIFHE Bot. How can I help?");
     });
 
     // Initial state
     updateSendState();
-    addMessage("Hi! I'm the Vifhe Assistant. How can I help?");
+    addMessage("Hi! I'm the VIFHE Bot. How can I help?");
   </script>
 </body>
 </html>
