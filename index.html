@@ -1,74 +1,230 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vifhe Assistant</title>
+  <meta name="color-scheme" content="dark light" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; background: #0b1020; color: #eef2ff; }
-    .wrap { max-width: 780px; margin: 40px auto; padding: 0 16px; }
-    h1 { margin: 0 0 8px; }
-    .box { background:#111834; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; }
-    #messages { height: 55vh; overflow:auto; padding:8px; }
-    .msg { background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; margin:10px 0; }
-    .me { background: rgba(167,139,250,.18); }
-    .row { display:flex; gap:8px; margin-top:10px; }
-    textarea { flex:1; min-height:44px; max-height:120px; resize:vertical; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:#0f162e; color:#eef2ff; padding:10px; }
-    button { border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#6ee7ff,#a78bfa); color:#0b1020; }
+    :root{
+      --bg: #0b1020;
+      --panel: #0f162e;
+      --panel-2:#0c1327;
+      --text: #eaf0ff;
+      --muted:#9aa4c7;
+      --accent:#7dd3fc;
+      --accent2:#a78bfa;
+      --border: rgba(255,255,255,.08);
+      --ring: rgba(125,211,252,.25);
+      --radius: 16px;
+      --shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+
+    *{ box-sizing: border-box }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color:var(--text);
+      background:
+        radial-gradient(900px 600px at -10% -20%, rgba(125,211,252,.12), transparent 60%),
+        radial-gradient(900px 600px at 110% 0%, rgba(167,139,250,.12), transparent 50%),
+        var(--bg);
+      display:grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* Header */
+    header{
+      position: sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px) saturate(130%);
+      background: linear-gradient(180deg, rgba(12,19,39,.7), rgba(12,19,39,.35));
+      border-bottom:1px solid var(--border);
+    }
+    .container{ width:min(980px, 92vw); margin:0 auto; padding:18px 0; display:flex; align-items:center; gap:12px; }
+    .logo{
+      width:40px; height:40px; border-radius:12px;
+      display:grid; place-items:center; font-weight:800; color:#0b1020;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: var(--shadow);
+    }
+    .brand h1{ margin:0; font-size:18px; letter-spacing:.2px; }
+    .brand p{ margin:2px 0 0; color:var(--muted); font-size:13px }
+
+    /* Card */
+    .card{
+      width:min(980px, 92vw); margin:22px auto;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      display:grid; grid-template-rows: 1fr auto;
+      min-height: 70vh;
+    }
+
+    /* Messages */
+    #messages{
+      padding:18px; overflow:auto; scroll-behavior:smooth;
+    }
+    .msg{
+      max-width: 72%;
+      padding:12px 14px; border:1px solid var(--border);
+      border-radius:14px; margin:10px 0; word-wrap:anywhere;
+      background: rgba(255,255,255,.04);
+      animation: fade .12s ease-out;
+    }
+    .me{
+      margin-left:auto;
+      background: linear-gradient(135deg, rgba(125,211,252,.18), rgba(167,139,250,.2));
+      border-color: rgba(255,255,255,.16);
+    }
+    .meta{ color:var(--muted); font-size:12px; margin-top:6px }
+    .typing{ display:inline-flex; gap:4px; vertical-align:middle }
+    .dot{ width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.6; animation: pulse 1.2s infinite }
+    .dot:nth-child(2){ animation-delay:.15s } .dot:nth-child(3){ animation-delay:.3s }
+    @keyframes fade{ from{opacity:0; transform:translateY(2px)} to{opacity:1; transform:none} }
+    @keyframes pulse{ 0%,80%,100%{opacity:.2; transform:translateY(0)} 40%{opacity:1; transform:translateY(-2px)} }
+
+    /* Input bar */
+    .input{
+      display:flex; gap:10px; padding:12px; border-top:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+    textarea{
+      flex:1; min-height:44px; max-height:140px; resize:none;
+      border-radius:12px; padding:12px 14px; color:var(--text);
+      background: var(--panel); border:1px solid var(--border); outline:none;
+      transition: box-shadow .15s ease, border-color .15s ease, background .2s ease;
+    }
+    textarea:focus{ border-color: var(--ring); box-shadow: 0 0 0 6px var(--ring); background: var(--panel-2) }
+
+    button{
+      appearance:none; border:0; cursor:pointer; font-weight:800;
+      padding:12px 18px; border-radius:12px; color:#0b1020;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 24px rgba(125,211,252,.18);
+      transition: transform .08s ease, opacity .2s ease, box-shadow .2s ease;
+      white-space: nowrap;
+    }
+    button:disabled{ opacity:.6; cursor:not-allowed }
+    button:hover{ transform: translateY(-1px) }
+
+    /* Mobile tweaks */
+    @media (max-width: 640px){
+      .msg{ max-width: 88% }
+      .container{ padding:14px 0 }
+      .card{ min-height: 75vh }
+    }
+
+    /* Reduce motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ animation: none !important; transition: none !important }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Vifhe Assistant</h1>
-    <p>Share this page URL with your client to test.</p>
-
-    <div class="box">
-      <div id="messages" aria-live="polite"></div>
-      <div class="row">
-        <textarea id="input" placeholder="Type your question…"></textarea>
-        <button id="send">Send</button>
+  <header>
+    <div class="container">
+      <div class="logo" aria-hidden>🎓</div>
+      <div class="brand">
+        <h1>Vifhe Assistant</h1>
+        <p>Your study companion — simple, fast, minimal.</p>
       </div>
     </div>
-  </div>
+  </header>
+
+  <main class="card" aria-live="polite">
+    <div id="messages"></div>
+
+    <form class="input" id="form">
+      <textarea id="input" placeholder="Type your question…  (Enter to send, Shift+Enter = new line)" aria-label="Message input"></textarea>
+      <button id="send" type="submit">Send ▸</button>
+    </form>
+  </main>
 
   <script>
-    const $m = document.getElementById('messages');
-    const $i = document.getElementById('input');
-    const $b = document.getElementById('send');
+    const $messages = document.getElementById('messages');
+    const $input = document.getElementById('input');
+    const $form = document.getElementById('form');
+    const $send = document.getElementById('send');
     let threadId = null;
+    let thinkingEl = null;
 
-    function add(text, cls='') {
-      const d = document.createElement('div');
-      d.className = 'msg ' + cls;
-      d.textContent = text;
-      $m.appendChild(d);
-      $m.scrollTop = $m.scrollHeight;
+    function addMessage(text, me=false){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg' + (me ? ' me' : '');
+      wrap.textContent = text;
+      $messages.appendChild(wrap);
+      $messages.scrollTop = $messages.scrollHeight;
+      return wrap;
     }
 
-    async function send() {
-      const message = $i.value.trim();
-      if (!message) return;
-      add(message, 'me');
-      $i.value = '';
-      $b.disabled = true; $b.textContent = '…';
+    function addThinking(){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg';
+      wrap.innerHTML = `<span class="meta">Vifhe Assistant is typing</span> <span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`;
+      $messages.appendChild(wrap);
+      $messages.scrollTop = $messages.scrollHeight;
+      return wrap;
+    }
 
-      try {
-        const r = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ message, threadId }) });
+    function setSending(state){
+      $send.disabled = state;
+      $send.textContent = state ? '…' : 'Send ▸';
+    }
+
+    async function sendMessage(message){
+      setSending(true);
+      thinkingEl = addThinking();
+      try{
+        const r = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ message, threadId })
+        });
         const j = await r.json();
-        if (!r.ok) add('Error: ' + (j.error || 'Unknown')); else {
-          add(j.reply || '(no reply)');
-          threadId = j.responseId || j.threadId || threadId;
+        if (thinkingEl) thinkingEl.remove();
+
+        if (!r.ok) {
+          addMessage('⚠️ ' + (j.error || 'Request failed'));
+          return;
         }
-      } catch(e) {
-        add('Network error. Try again.');
-      } finally {
-        $b.disabled = false; $b.textContent = 'Send';
+        addMessage(j.reply || '(no reply)');
+        threadId = j.responseId || j.threadId || threadId;
+      }catch(err){
+        if (thinkingEl) thinkingEl.remove();
+        addMessage('⚠️ Network error. Please try again.');
+      }finally{
+        setSending(false);
       }
     }
 
-    $b.onclick = send;
-    $i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }});
-    add("Hi! I'm the Vifhe Assistant. How can I help?");
+    // Auto-grow textarea
+    $input.addEventListener('input', () => {
+      $input.style.height = 'auto';
+      $input.style.height = Math.min($input.scrollHeight, 140) + 'px';
+    });
+
+    // Submit on Enter, with Shift+Enter for newline
+    $form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const message = $input.value.trim();
+      if (!message) return;
+      addMessage(message, true);
+      $input.value = '';
+      $input.style.height = '44px';
+      sendMessage(message);
+    });
+    $input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        $form.requestSubmit();
+      }
+    });
+
+    // Welcome
+    addMessage("Hi! I'm the Vifhe Assistant. How can I help?");
   </script>
 </body>
 </html>
